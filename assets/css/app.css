@@ -1,0 +1,629 @@
+/* ==========================================================================
+   应用样式 · app.css
+   --------------------------------------------------------------------------
+   规则：本文件所有具体数值均引用 tokens.css 中的令牌，禁止写死颜色/间距/字号。
+   主题：天空 + 磨砂玻璃。
+     - 页面底：天空背景图（PC / 移动端各一张），缺失时回退天空渐变
+     - 结构面（顶栏 / 侧栏 / 内容 / 页脚）与卡片：磨砂玻璃
+   同时负责把 Layui 默认配色映射到本项目的令牌，实现整站视觉统一。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 基础
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body.app-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-text);
+  min-height: 100vh;
+  min-height: 100svh;
+
+  /* 天空背景：底色 + 渐变兜底（图片缺失时也能得到天空观感） */
+  background-color: var(--color-sky-deep);
+  background-image: var(--gradient-sky);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+
+  -webkit-font-smoothing: antialiased;
+}
+
+/* PC：横版天空图 + 渐变兜底；固定背景，滚动时画面保持 */
+@media (min-width: 769px) {
+  body.app-body {
+    background-image: var(--bg-image-pc), var(--gradient-sky);
+    background-attachment: fixed;
+  }
+}
+
+/* 移动端：竖版天空图 + 渐变兜底；不用 fixed（iOS 不支持，改为滚动以稳定） */
+@media (max-width: 768px) {
+  body.app-body {
+    background-image: var(--bg-image-mobile), var(--gradient-sky);
+    background-attachment: scroll;
+  }
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* --------------------------------------------------------------------------
+   2. 磨砂玻璃：结构面通用底纹
+   半透明白 + 背景模糊 + 高光描边。backdrop-filter 不可用时退化为半透明白，
+   依然可读（不构成硬依赖）。
+   -------------------------------------------------------------------------- */
+.app-header,
+.app-sidebar,
+.app-footer,
+.app-content,
+.app-card,
+.app-state {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* --------------------------------------------------------------------------
+   3. 顶部栏（磨砂玻璃）
+   -------------------------------------------------------------------------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--header-height);
+  padding: 0 var(--space-4);
+  background-color: var(--glass-bg-strong);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-sm);
+}
+
+.app-header__spacer {
+  flex: 1 1 auto;
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.app-brand:hover {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.app-brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45);
+}
+
+/* 用图片作为品牌标时：裁切铺满方形，去掉字母底色的蓝色本色与蓝光 */
+.app-brand__mark--avatar {
+  overflow: hidden;
+  background-color: transparent;
+  box-shadow: var(--shadow-md);
+}
+
+.app-brand__mark--avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-brand__name {
+  font-size: var(--font-size-base);
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.app-user__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+/* 顶栏登录用户头像：圆形裁切 */
+.app-user__avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.app-user__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-user__logout {
+  margin: 0;
+}
+
+/* 汉堡按钮（移动端） */
+.app-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--field-bg);
+  color: var(--color-text);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--easing);
+}
+
+.app-hamburger:hover {
+  background-color: var(--glass-bg-strong);
+}
+
+.app-hamburger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   4. 布局外壳：侧栏 + 主区
+   -------------------------------------------------------------------------- */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100svh - var(--header-height));
+}
+
+.app-sidebar {
+  flex: 0 0 220px;
+  width: 220px;
+  padding: var(--space-4) var(--space-2);
+  background-color: var(--glass-bg-strong);
+  border-right: 1px solid var(--glass-border);
+}
+
+.app-nav__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-nav__item {
+  margin-bottom: var(--space-1);
+}
+
+.app-nav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  transition: background-color var(--motion-fast) var(--easing),
+    color var(--motion-fast) var(--easing);
+}
+
+.app-nav__link:hover {
+  background-color: var(--glass-bg-strong);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.app-nav__link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.app-nav__link.is-active {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.42);
+}
+
+.app-nav__link.is-active:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-on-primary);
+}
+
+.app-nav__link.is-placeholder {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.app-nav__badge {
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background-color: var(--glass-bg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: normal;
+}
+
+.app-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 内容面：整块磨砂玻璃，保证正文在天空背景上始终可读 */
+.app-content {
+  flex: 1 1 auto;
+  padding: var(--space-5);
+  background-color: var(--glass-bg);
+}
+
+.app-content__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------------------
+   5. 页脚（磨砂玻璃）
+   -------------------------------------------------------------------------- */
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--glass-bg-strong);
+  border-top: 1px solid var(--glass-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.app-footer__meta {
+  color: var(--color-text-disabled);
+}
+
+/* --------------------------------------------------------------------------
+   6. 通用组件（卡片 / 状态，磨砂玻璃）
+   -------------------------------------------------------------------------- */
+.app-page-head {
+  margin-bottom: var(--space-5);
+}
+
+.app-page-head__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xl);
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.app-page-head__desc {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.app-section-title {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.app-card {
+  height: 100%;
+  padding: var(--space-5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--glass-bg-strong);
+  box-shadow: var(--glass-shadow-sm);
+}
+
+.app-card__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.app-card__line {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.app-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 状态占位：loading / empty / error */
+.app-state {
+  height: 100%;
+  padding: var(--space-6);
+  border: 1px dashed var(--glass-hairline);
+  border-radius: var(--radius-lg);
+  background-color: var(--glass-bg);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.app-state__title {
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.app-state__desc {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.app-state--error {
+  border-color: var(--color-danger);
+}
+
+.app-state--error .app-state__title {
+  color: var(--color-danger);
+}
+
+.app-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 错误页 */
+.app-error {
+  max-width: 560px;
+  margin: var(--space-7) auto;
+  text-align: center;
+}
+
+.app-error__code {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-danger);
+}
+
+.app-error__title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.app-error__message {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   7. 覆盖 Layui 默认配色 -> 令牌
+   将 Layui 的主色/按钮/边框/输入框等映射到本项目令牌，实现整站统一。
+   -------------------------------------------------------------------------- */
+.layui-btn {
+  background-color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--motion-fast) var(--easing);
+}
+
+.layui-btn:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-on-primary);
+}
+
+.layui-btn.layui-btn-normal {
+  background-color: var(--color-primary);
+}
+
+.layui-btn.layui-btn-normal:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.layui-btn.layui-btn-primary {
+  background-color: var(--glass-bg-strong);
+  border: 1px solid var(--field-border);
+  color: var(--color-text);
+}
+
+.layui-btn.layui-btn-primary:hover {
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.layui-btn.layui-btn-danger {
+  background-color: var(--color-danger);
+}
+
+.layui-btn.layui-btn-warm {
+  background-color: var(--color-warning);
+}
+
+.layui-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.layui-input,
+.layui-textarea {
+  border-color: var(--field-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background-color: var(--field-bg);
+}
+
+.layui-input:focus,
+.layui-textarea:focus {
+  border-color: var(--color-primary) !important;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.20);
+}
+
+.layui-form-label {
+  color: var(--color-text);
+}
+
+.layui-nav {
+  background-color: var(--color-secondary);
+}
+
+.layui-nav .layui-nav-item a:hover,
+.layui-nav .layui-this a {
+  background-color: var(--color-primary);
+}
+
+.layui-elem-quote {
+  border-left: 5px solid var(--color-primary);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+}
+
+.layui-table th {
+  background-color: var(--color-bg-sunken);
+  color: var(--color-text);
+}
+
+.layui-table td,
+.layui-table th {
+  border-color: var(--color-border);
+}
+
+.layui-laypage .layui-laypage-curr .layui-laypage-em {
+  background-color: var(--color-primary);
+}
+
+.layui-badge,
+.layui-badge-rim {
+  border-radius: var(--radius-sm);
+}
+
+.layui-badge.layui-bg-blue {
+  background-color: var(--color-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. 响应式（PC + 手机）
+   -------------------------------------------------------------------------- */
+.app-sidebar-backdrop {
+  position: fixed;
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 800;
+  background-color: rgba(12, 34, 78, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--motion-base) var(--easing),
+    visibility var(--motion-base) var(--easing);
+}
+
+.app-sidebar-backdrop.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 768px) {
+  .app-hamburger {
+    display: inline-flex;
+  }
+
+  .app-header {
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+  }
+
+  .app-shell {
+    position: relative;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    top: var(--header-height);
+    bottom: 0;
+    left: 0;
+    z-index: 900;
+    width: 240px;
+    flex-basis: 240px;
+    overflow-y: auto;
+    box-shadow: var(--glass-shadow);
+    transform: translateX(-100%);
+    transition: transform var(--motion-base) var(--easing);
+  }
+
+  .app-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .app-content {
+    padding: var(--space-4);
+  }
+
+  .app-footer {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+@media (min-width: 769px) {
+  .app-sidebar-backdrop {
+    display: none;
+  }
+}

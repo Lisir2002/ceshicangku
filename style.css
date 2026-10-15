@@ -1,0 +1,449 @@
+/* ==========================================================================
+   style.css · 博客实验室（blog_lab）
+   --------------------------------------------------------------------------
+   本文件是页面样式入口：
+     - 引入设计令牌层（tokens.css）与通用应用样式（app.css）
+     - 在其之上补充本实验项目所需的页面级样式（登录页 / 初始化页）
+   规则：新增样式只引用 tokens.css 的令牌，不写死颜色/间距/字号。
+   ========================================================================== */
+
+@import url("/assets/css/tokens.css");
+@import url("/assets/css/app.css");
+
+/* ==========================================================================
+   1. 登录页（天空背景 + 磨砂玻璃卡片）
+   --------------------------------------------------------------------------
+   布局要求：
+     - PC：卡片不居中于整屏，而是置于「左半侧」并在该半区内居中
+     - 移动端：卡片居中
+   稳定性：min-height 用 svh（小视口），键盘/地址栏变化时高度稳定、不抖动；
+          输入框字号 ≥16px，规避 iOS 聚焦自动放大。
+   ========================================================================== */
+.auth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* 交叉轴（水平）居中 */
+  justify-content: center;
+  min-height: 100vh;     /* 回退（旧浏览器） */
+  min-height: 100svh;    /* 现代浏览器：小视口，键盘/地址栏变化时高度稳定 */
+  padding: var(--space-4);
+}
+
+.auth__card {
+  width: 100%;
+  max-width: var(--auth-card-max);
+  margin: auto 0;        /* 主轴（垂直）auto：空间充足时居中，不足时贴顶不裁切 */
+  padding: var(--space-6);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background-color: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-shadow);
+}
+
+/* PC：仅占左半侧，卡片在其中居中（右侧留出天空） */
+@media (min-width: 769px) {
+  .auth {
+    width: 50%;
+  }
+}
+
+/* 移动端：占满宽度，卡片居中；键盘避让交给 --keyboard-inset */
+@media (max-width: 768px) {
+  .auth {
+    width: 100%;
+    /* 软键盘弹出时，底部让出键盘高度：卡片整体上移，聚焦字段留在键盘之上。
+       --keyboard-inset 由 login.js 依据 visualViewport 计算（默认 0px）。 */
+    padding-bottom: calc(var(--space-4) + var(--keyboard-inset, 0px));
+    transition: padding-bottom var(--motion-base) var(--easing);
+  }
+}
+
+/* 键盘展开时（仅移动端）取消垂直居中，改为贴顶并允许滚动，
+   避免卡片被顶部裁切、聚焦字段被键盘遮挡。 */
+@media (max-width: 768px) {
+  html.is-keyboard-open .auth {
+    justify-content: flex-start;
+  }
+  html.is-keyboard-open .auth__card {
+    margin-top: 0;
+  }
+}
+
+.auth__brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
+.auth__brand .app-brand__mark {
+  width: 44px;
+  height: 44px;
+  font-size: var(--font-size-lg);
+}
+
+.auth__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+  text-align: center;
+  color: var(--color-text);
+}
+
+.auth__sub {
+  margin: 0 0 var(--space-5);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* 登录错误提示（服务端返回）：图标 + 文案同行 */
+.auth__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background-color: rgba(220, 38, 38, 0.10);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.auth__error .layui-icon {
+  font-size: var(--font-size-base);
+}
+
+/* 空态引导文案（初始未填写时展示的填写说明） */
+.auth__guide {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   2. 输入框组件（field）
+   --------------------------------------------------------------------------
+   Material 3 浮动标签：标签始终可见、不消失；聚焦或有内容时上浮为小字。
+   结构（三个元素的顺序不可变，浮动依赖 CSS 兄弟选择器）：
+     .field
+       ├ .field__control        相对定位容器（描边 + 聚焦光环）
+       │   ├ input.field__input 输入控件
+       │   ├ label.field__label 浮动标签（必须在 input 之后）
+       │   └ button (可选)      尾部操作：显示密码 / 换验证码
+       └ p.field__msg           字段级提示（默认 hidden）
+   ========================================================================== */
+.field {
+  margin-bottom: var(--space-4);
+}
+
+.field__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 56px;      /* ≥48px 触控目标（WCAG 2.2） */
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-md);
+  background-color: var(--field-bg);
+  transition: border-color var(--motion-fast) var(--easing),
+              box-shadow var(--motion-fast) var(--easing),
+              background-color var(--motion-fast) var(--easing);
+}
+
+.field__control:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+/* 聚焦：主色描边 + 光环；-webkit-appearance 已去除，无系统内阴影干扰 */
+.field__control:focus-within {
+  border-color: var(--color-primary);
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 3px var(--field-focus-ring);
+}
+
+/* 校验未通过：描边与光环转为危险色（放在聚焦规则之后以覆盖它） */
+.field.is-invalid .field__control,
+.field.is-invalid .field__control:hover {
+  border-color: var(--color-danger);
+}
+
+.field.is-invalid .field__control:focus-within {
+  box-shadow: 0 0 0 3px var(--field-invalid-ring);
+}
+
+.field__input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 56px;
+  /* 上留 22px 供浮动标签落位，下留 6px 保持文本视觉居中 */
+  padding: 22px var(--space-3) 6px;
+  border: 0;
+  background-color: transparent;
+  color: var(--color-text);
+  font-size: 16px;       /* ≥16px：规避 iOS 聚焦自动放大 */
+  line-height: 1.4;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 输入区自身的 placeholder 只作占位（单空格），不展示文字 */
+.field__input::placeholder {
+  color: transparent;
+}
+
+/* 浮动标签：默认居中在控件内，聚焦/有内容/出错时上浮为 12px 小字 */
+.field__label {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;   /* 标签不吃点击，点它等同点输入框 */
+  transition: top var(--motion-fast) var(--easing),
+              transform var(--motion-fast) var(--easing),
+              font-size var(--motion-fast) var(--easing),
+              color var(--motion-fast) var(--easing);
+}
+
+.field__input:focus ~ .field__label,
+.field__input:not(:placeholder-shown) ~ .field__label,
+.field.is-invalid .field__label {
+  top: 12px;
+  transform: translateY(0);
+  font-size: 12px;
+}
+
+.field__input:focus ~ .field__label {
+  color: var(--color-primary);
+}
+
+/* 出错时标签转危险色（置于聚焦规则之后以覆盖上浮态的颜色） */
+.field.is-invalid .field__label,
+.field.is-invalid .field__input:focus ~ .field__label {
+  color: var(--color-danger);
+}
+
+/* 字段级提示：空值 / 格式不符时就地展示，不触发整页加载 */
+.field__msg {
+  margin: var(--space-2) 0 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.field__msg[hidden] {
+  display: none;
+}
+
+/* 尾部操作按钮（显示密码）：文字按钮，触控目标 ≥44px */
+.field__toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-right: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.field__toggle:hover {
+  background-color: var(--field-focus-ring);
+}
+
+.field__toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 验证码图片按钮：点击换一张 */
+.field__captcha {
+  flex: 0 0 auto;
+  margin-right: var(--space-2);
+  padding: 0;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-elevated);
+  line-height: 0;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--easing);
+}
+
+.field__captcha:hover {
+  border-color: var(--color-primary);
+}
+
+.field__captcha:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.field__captcha img {
+  display: block;
+  height: 40px;
+  width: auto;
+  border-radius: var(--radius-sm);
+}
+
+/* 验证码输入：数字加大间距便于辨识；占位态不受影响 */
+.field[data-field="captcha"] .field__input {
+  letter-spacing: 0.3em;
+}
+
+/* ==========================================================================
+   3. 提交按钮加载态：只在按钮内显示圆形旋转，不覆盖整页
+   流程：登录 → 验证中 → 登录中 →（提交）→ 后台页面
+   ========================================================================== */
+.auth__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.auth__submit-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  border-color: var(--color-on-primary);
+  border-right-color: transparent;
+}
+
+.auth__submit.is-loading .auth__submit-spinner {
+  display: inline-block;
+}
+
+.auth__submit.is-loading {
+  cursor: progress;
+  opacity: 0.92;
+}
+
+/* ==========================================================================
+   4. init_db.php 初始化结果页（磨砂玻璃卡片）
+   ========================================================================== */
+.setup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: var(--space-5);
+}
+
+.setup__card {
+  width: 100%;
+  max-width: 560px;
+  padding: var(--space-6);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background-color: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-shadow);
+}
+
+.setup__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.setup__desc {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.setup__list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.setup__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--glass-hairline);
+  color: var(--color-text);
+}
+
+.setup__item .layui-icon {
+  margin-top: 0.25em;
+}
+
+.setup__item--ok .layui-icon {
+  color: var(--color-success);
+}
+
+.setup__item--fail {
+  color: var(--color-danger);
+}
+
+.setup__item--fail .layui-icon {
+  color: var(--color-danger);
+}
+
+.setup__foot {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* 后台页面内嵌该结果列表时：去掉最后一项的下边框，避免悬空细线 */
+.app-card .setup__item:last-child {
+  border-bottom: 0;
+}
+
+/* ==========================================================================
+   5. 结果列表自适应（后台「漏洞验证」页 / 初始化页共用）
+   --------------------------------------------------------------------------
+   横向溢出的根因：.setup__item 是 flex 容器，子项默认 min-width:auto —— 即
+   「不小于内容最小宽度」。而 username=…&password=…&captcha=… 这类等宽长串
+   没有断行机会，最小宽度极大，于是把卡片顶宽、页面出现横向滚动。
+   解决：子项 min-width:0 允许收缩 + overflow-wrap:anywhere 任意位置断行
+        （anywhere 会参与最小宽度计算，break-word 不会，故必须用 anywhere）。
+   ========================================================================== */
+.setup__item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 请求行等代码片段：做成可换行的代码小片，任何屏幕宽度下都不顶宽 */
+.setup__code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  word-break: break-all;
+}
+
+/* 后台页内多张卡片竖排时的间距 */
+.app-card + .app-card {
+  margin-top: var(--space-5);
+}
+
+/* 操作按钮组：自动换行，窄屏不溢出（一键跳转入口） */
+.setup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+}

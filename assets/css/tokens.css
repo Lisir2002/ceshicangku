@@ -1,0 +1,126 @@
+/* ==========================================================================
+   UI 令牌接口层 · Design Tokens
+   --------------------------------------------------------------------------
+   本文件是整站视觉的"唯一接口"。业务样式表（app.css / style.css）只允许
+   引用这里的令牌名，不允许写死具体数值。换肤只需改本文件。
+
+   主题：天空（取自用户提供的两张背景图 —— PC 横版 / 移动端竖版）
+     - 深空蓝（画面上缘）：--color-sky-deep
+     - 天空主蓝（主色来源）：--color-primary
+     - 近太阳亮蓝：--color-sky-soft
+     - 云边淡蓝：--color-sky-pale
+     - 云白：--color-cloud
+
+   配色策略（60-30-10）：
+     - 60% 中性：磨砂玻璃面与文字（--glass-*, --color-text*）
+     - 30% 次级结构色：--color-secondary（导航、次级容器）
+     - 10% 强调色：--color-primary / --color-accent（主按钮与关键操作）
+
+   磨砂玻璃（frosted glass）：
+     - 半透明白 + backdrop-filter 模糊 + 高光描边，承载正文以保证可读性
+     - backdrop-filter 不可用时自动退化为半透明白，仍可读、不依赖该特性
+
+   对比度（WCAG 2.2，正文需 ≥4.5:1，UI/大字需 ≥3:1）：
+     - 正文 --color-text (#0f2a56) 对白底 ≈ 13:1（达标）
+     - 次要文字 --color-text-secondary (#35517d) 对白底 ≈ 8:1（达标）
+     - 禁用文字 --color-text-disabled (#8aa0c0) 对白底 ≈ 2.4:1（仅禁用态，按豁免）
+     - 主色 #2563eb 上白字 ≈ 5.2:1；hover #1d4ed8 ≈ 6.5:1
+     - success #15803d ≈ 5.0:1；warning #b45309 ≈ 5.0:1；danger #dc2626 ≈ 4.8:1；info #0369a1 ≈ 5.9:1
+   ========================================================================== */
+
+:root {
+  /* ---- 天空主题色（取自背景图）---- */
+  --color-sky-deep: #122c63;
+  --color-sky: #2563eb;
+  --color-sky-soft: #6fb1ef;
+  --color-sky-pale: #cfe6fb;
+  --color-cloud: #f4f8ff;
+
+  /* ---- 背景图（用户提供；文件缺失时自动回退到 --gradient-sky）---- */
+  --bg-image-pc: url("/assets/images/bg-pc.webp");
+  --bg-image-mobile: url("/assets/images/bg-mobile.webp");
+  --gradient-sky: linear-gradient(
+    180deg,
+    #122c63 0%,
+    #1d4ed8 30%,
+    #3b82f6 56%,
+    #7cb8ef 78%,
+    #d8ecfd 100%
+  );
+
+  /* ---- 颜色 · 核心色 ---- */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-on-primary: #ffffff;  /* 主色/主按钮上的文字与图标（对比度 ≈5.2:1） */
+  --color-secondary: #1c3d84;
+  --color-accent: #0ea5e9;
+
+  /* ---- 颜色 · 语义状态色 ---- */
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #dc2626;
+  --color-info: #0369a1;
+
+  /* ---- 颜色 · 文字 ---- */
+  --color-text: #0f2a56;
+  --color-text-secondary: #35517d;
+  --color-text-disabled: #8aa0c0;
+
+  /* ---- 颜色 · 边框与背景 ---- */
+  --color-border: #bfd6f0;
+  --color-bg: #eaf3fd;
+  --color-bg-elevated: #ffffff;
+  --color-bg-sunken: #dcebfc;
+
+  /* ---- 表单控件 ---- */
+  --field-bg: rgba(255, 255, 255, 0.78);
+  --field-border: rgba(18, 44, 99, 0.18);
+  --field-invalid-ring: rgba(220, 38, 38, 0.18);  /* 校验未通过字段的聚焦光环 */
+  --field-focus-ring: rgba(37, 99, 235, 0.22);    /* 聚焦字段的光环（与主色同源） */
+
+  /* ---- 磨砂玻璃 ---- */
+  --glass-blur: 18px;
+  --glass-saturate: 1.4;
+  --glass-bg: rgba(255, 255, 255, 0.44);
+  --glass-bg-strong: rgba(255, 255, 255, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-hairline: rgba(18, 44, 99, 0.14);
+  --glass-shadow: 0 18px 48px rgba(10, 32, 74, 0.28);
+  --glass-shadow-sm: 0 6px 20px rgba(10, 32, 74, 0.16);
+
+  /* ---- 间距（8px 栅格）---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ---- 字号（base 16px，行高 1.6）---- */
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+  --line-height: 1.6;
+
+  /* ---- 圆角 ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  /* ---- 阴影（实心面板用；玻璃面板请用 --glass-shadow*）---- */
+  --shadow-sm: 0 1px 2px rgba(10, 32, 74, 0.08);
+  --shadow-md: 0 4px 12px rgba(10, 32, 74, 0.10);
+  --shadow-lg: 0 12px 32px rgba(10, 32, 74, 0.18);
+
+  /* ---- 动效 ---- */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- 布局 ---- */
+  --auth-card-max: 400px;
+  --header-height: 56px;
+}
