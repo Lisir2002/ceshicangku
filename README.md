@@ -27,6 +27,7 @@ blog_lab/
 ├── login.php                 # ★ 处理登录请求
 ├── admin.php                 # ★ 登录成功后台页（显示“欢迎 xxx”）
 ├── logout.php                # 退出登录
+├── verify_vulns.php          # ★ 漏洞验证页（三张漏洞卡 + 总结卡，AJAX 不刷新）
 ├── style.css                 # ★ 页面样式入口（@import 令牌层 + app.css）
 ├── docs/                     # 文档目录
 │   ├── 协同文档.md            # 协作基线文档（规则 / 决策 / 技术点）
@@ -38,13 +39,14 @@ blog_lab/
 │   ├── csrf.php              # CSRF 令牌
 │   ├── auth.php              # 登录 / 会话（含故意漏洞）
 │   ├── helpers.php           # 通用助手（转义 / 跳转 / 统一错误页）
+│   ├── lab-mode.php          # 靶场/修复模式开关（每漏洞独立，存系统临时目录）
 │   └── layout/               # 布局片段（header / sidebar / footer）
 └── assets/                   # 静态资源
     ├── css/                  # tokens.css（设计令牌层） + app.css
-    ├── js/                   # app.js（交互增强）
+    ├── js/                   # app.js（交互增强）/ login.js（登录 AJAX）/ verify.js（验证页 AJAX）
     ├── images/               # bg-pc.webp / bg-mobile.webp（天空背景）
     └── vendor/               # 第三方依赖
-        └── layui/            # Layui 2.13.8 本地副本
+        └── layui/            # Layui 2.13.8 本地副本（仅引入 css，不加载 layui.js）
 ```
 
 > ★ = 需求指定的固定文件，均保持在项目根目录。目录约定的完整说明见 [协同文档 · 7.3](docs/协同文档.md)。
