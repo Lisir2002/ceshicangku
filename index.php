@@ -36,7 +36,7 @@ $ac_password        = $is_mobile ? 'new-password' : 'current-password';
 $ac_form            = $is_mobile ? 'off' : 'on';
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-device="<?php echo e(device_class()); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -45,7 +45,7 @@ $ac_form            = $is_mobile ? 'off' : 'on';
     <link rel="stylesheet" href="/assets/vendor/layui/css/layui.css">
     <link rel="stylesheet" href="/style.css">
 </head>
-<body class="app-body app-body--auth">
+<body class="<?php echo e(body_class('app-body--auth')); ?>">
 <main class="auth" role="main">
     <section class="auth__card">
         <div class="auth__brand">
@@ -56,12 +56,10 @@ $ac_form            = $is_mobile ? 'off' : 'on';
         <h1 class="auth__title"><?php echo e($app_name); ?></h1>
         <p class="auth__sub">请登录后进入后台</p>
 
-        <?php if ($error !== '') { ?>
-        <div class="auth__error" role="alert">
+        <div class="auth__error" id="auth-error" role="alert"<?php echo $error === '' ? ' hidden' : ''; ?>>
             <i class="layui-icon layui-icon-close-fill" aria-hidden="true"></i>
-            <span><?php echo e($error); ?></span>
+            <span id="auth-error-text"><?php echo e($error); ?></span>
         </div>
-        <?php } ?>
 
         <form class="auth__form" method="post" action="/login.php"
               autocomplete="<?php echo e($ac_form); ?>" novalidate>

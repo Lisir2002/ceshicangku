@@ -134,7 +134,7 @@ if (PHP_SAPI === 'cli') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-device="<?php echo e(device_class()); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -142,7 +142,7 @@ if (PHP_SAPI === 'cli') {
     <link rel="stylesheet" href="/assets/vendor/layui/css/layui.css">
     <link rel="stylesheet" href="/style.css">
 </head>
-<body class="app-body">
+<body class="<?php echo e(body_class()); ?>">
 <main class="setup">
     <section class="setup__card">
         <h1 class="setup__title">初始化数据库</h1>

@@ -83,27 +83,76 @@ if (!function_exists('flash_get')) {
     }
 }
 
-if (!function_exists('is_mobile_client')) {
+if (!function_exists('device_class')) {
     /**
-     * 判断当前请求是否来自移动端。
+     * 判断当前请求的「端」： 'pc' 或 'mobile'。
      * ----------------------------------------------------------------------
-     * 用途：登录页按设备决定「自动填充策略」——
-     *   桌面端：给出标准 autocomplete 令牌（username / current-password），
-     *           便于密码管理器一键填充（Google/Chromium/Material 的推荐做法）；
-     *   移动端：改用 off / new-password，抑制系统密码保险箱反复弹出。
+     * 判据以 **User-Agent 为准**（布局的端级分支据此切换，不再看窗口宽度）：
+     *   - UA 命中手机 / 平板关键字        -> 'mobile'
+     *   - UA 明确是桌面平台（Win/Mac/Linux/X11） -> 'pc'
+     *   - UA 无明确信号时才回退到客户端提示 Sec-CH-UA-Mobile
      *
-     * 判定顺序：优先读取 UA 客户端提示 Sec-CH-UA-Mobile（Chrome/Edge 会发送），
-     *          其余浏览器回退到 User-Agent 关键字匹配。
+     * 为何以 UA 优先：浏览器「请求桌面版网站」只改 UA，应当真正切到 PC 布局；
+     * 而某些内嵌 WebView 切了 UA 后 Sec-CH-UA-Mobile 仍为 ?1，若优先看它，端就切不过去。
      */
-    function is_mobile_client()
+    function device_class()
     {
-        if (isset($_SERVER['HTTP_SEC_CH_UA_MOBILE'])) {
-            return $_SERVER['HTTP_SEC_CH_UA_MOBILE'] === '?1';
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
         }
 
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
 
-        return $ua !== '' && preg_match('/android|iphone|ipad|ipod|windows phone|harmonyos|mobile/', $ua) === 1;
+        if ($ua !== '') {
+            if (preg_match('/android|iphone|ipod|windows phone|harmonyos|mobile|ipad|tablet|kindle|silk|playbook/', $ua) === 1) {
+                $cached = 'mobile';
+                return $cached;
+            }
+            if (preg_match('/windows|macintosh|linux|x11|cros/', $ua) === 1) {
+                $cached = 'pc';
+                return $cached;
+            }
+        }
+
+        if (isset($_SERVER['HTTP_SEC_CH_UA_MOBILE'])) {
+            $cached = ($_SERVER['HTTP_SEC_CH_UA_MOBILE'] === '?1') ? 'mobile' : 'pc';
+            return $cached;
+        }
+
+        $cached = 'pc';
+        return $cached;
+    }
+}
+
+if (!function_exists('body_class')) {
+    /**
+     * 拼接 <body> 的 class：始终带 app-body 与端类（app-body--pc / app-body--mobile），
+     * 布局的端级分支据此切换；$extra 可再追加（如 'app-body--auth'）。
+     */
+    function body_class($extra = '')
+    {
+        $classes = array('app-body', 'app-body--' . device_class());
+
+        if (is_string($extra) && trim($extra) !== '') {
+            foreach (preg_split('/\s+/', trim($extra)) as $one) {
+                if ($one !== '') {
+                    $classes[] = $one;
+                }
+            }
+        }
+
+        return implode(' ', $classes);
+    }
+}
+
+if (!function_exists('is_mobile_client')) {
+    /**
+     * 是否移动端（登录页自动填充策略用）：等价于 device_class() === 'mobile'。
+     */
+    function is_mobile_client()
+    {
+        return device_class() === 'mobile';
     }
 }
 
@@ -144,7 +193,7 @@ if (!function_exists('render_error_page')) {
         $app_name = config('app.name', '后台管理');
         ?>
         <!DOCTYPE html>
-        <html lang="zh-CN">
+        <html lang="zh-CN" data-device="<?php echo e(device_class()); ?>">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -152,7 +201,7 @@ if (!function_exists('render_error_page')) {
             <link rel="stylesheet" href="/assets/vendor/layui/css/layui.css">
             <link rel="stylesheet" href="/style.css">
         </head>
-        <body class="app-body">
+        <body class="<?php echo e(body_class()); ?>">
             <main class="auth">
                 <div class="auth__card app-error">
                     <div class="app-error__code"><?php echo e($error_code); ?></div>

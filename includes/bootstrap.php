@@ -23,6 +23,7 @@ $GLOBALS['APP_CONFIG'] = require $__config_file;
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/lab-mode.php';
 require_once __DIR__ . '/auth.php';
 
 // 3. 时区

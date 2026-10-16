@@ -24,7 +24,7 @@ if ($__user) {
 $__full_title  = $page_title !== '' ? $page_title . ' - ' . $__app_name : $__app_name;
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-device="<?php echo e(device_class()); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,8 +32,13 @@ $__full_title  = $page_title !== '' ? $page_title . ' - ' . $__app_name : $__app
     <title><?php echo e($__full_title); ?></title>
     <link rel="stylesheet" href="/assets/vendor/layui/css/layui.css">
     <link rel="stylesheet" href="/style.css">
+    <script>
+        /* 把视口高度写入 CSS 变量：部分内嵌 WebView 会将 100vh / 100svh 解析为 0，
+           导致页面撑不满视口、底栏悬空。放在 head 里先于渲染执行，避免布局跳一下。 */
+        document.documentElement.style.setProperty('--app-viewport-height', window.innerHeight + 'px');
+    </script>
 </head>
-<body class="app-body">
+<body class="<?php echo e(body_class()); ?>">
 <header class="app-header" role="banner">
     <button type="button" class="app-hamburger" id="app-sidebar-toggle"
             aria-controls="app-sidebar" aria-expanded="false" aria-label="切换导航菜单">

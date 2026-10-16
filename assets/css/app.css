@@ -29,8 +29,13 @@ body.app-body {
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--color-text);
-  min-height: 100vh;
-  min-height: 100svh;
+
+  /* 三段式：顶栏 / 主体 / 底栏。主体 flex:1 撑满剩余高度，底栏因此始终沉底。
+     高度用 --app-viewport-height（app.js 按 window.innerHeight 写入）：
+     部分内嵌 WebView 会把 100vh / 100svh 解析为 0，页面撑不满视口、底栏会悬空。 */
+  display: flex;
+  flex-direction: column;
+  min-height: var(--app-viewport-height, 100vh);
 
   /* 天空背景：底色 + 渐变兜底（图片缺失时也能得到天空观感） */
   background-color: var(--color-sky-deep);
@@ -42,20 +47,16 @@ body.app-body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* PC：横版天空图 + 渐变兜底；固定背景，滚动时画面保持 */
-@media (min-width: 769px) {
-  body.app-body {
-    background-image: var(--bg-image-pc), var(--gradient-sky);
-    background-attachment: fixed;
-  }
+/* 端级分支：背景图跟「端」走（PC 横版 / 移动竖版），不再看窗口宽度 */
+body.app-body--pc {
+  background-image: var(--bg-image-pc), var(--gradient-sky);
+  background-attachment: fixed;
 }
 
-/* 移动端：竖版天空图 + 渐变兜底；不用 fixed（iOS 不支持，改为滚动以稳定） */
-@media (max-width: 768px) {
-  body.app-body {
-    background-image: var(--bg-image-mobile), var(--gradient-sky);
-    background-attachment: scroll;
-  }
+body.app-body--mobile {
+  /* 移动端不用 fixed（iOS 不支持），改为滚动以稳定 */
+  background-image: var(--bg-image-mobile), var(--gradient-sky);
+  background-attachment: scroll;
 }
 
 a {
@@ -98,6 +99,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 1000;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -194,7 +196,8 @@ code {
 
 /* 汉堡按钮（移动端） */
 .app-hamburger {
-  display: none;
+  /* 默认显示（抽屉形态）：移动端始终如此；PC 端由端类直接隐藏（见文件末尾） */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -224,16 +227,28 @@ code {
 .app-shell {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - var(--header-height));
-  min-height: calc(100svh - var(--header-height));
+  flex: 1 1 auto;
 }
 
+/* 侧栏默认「抽屉」形态：移动端始终如此；PC 端由端类改为常驻（见文件末尾） */
 .app-sidebar {
-  flex: 0 0 220px;
-  width: 220px;
+  position: fixed;
+  top: var(--header-height);
+  bottom: 0;
+  left: 0;
+  z-index: 900;
+  width: 240px;
   padding: var(--space-4) var(--space-2);
+  overflow-y: auto;
   background-color: var(--glass-bg-strong);
   border-right: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transform: translateX(-100%);
+  transition: transform var(--motion-base) var(--easing);
+}
+
+.app-sidebar.is-open {
+  transform: translateX(0);
 }
 
 .app-nav__list {
@@ -317,6 +332,7 @@ code {
    5. 页脚（磨砂玻璃）
    -------------------------------------------------------------------------- */
 .app-footer {
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   gap: var(--space-4);
@@ -580,36 +596,16 @@ code {
   visibility: visible;
 }
 
-@media (max-width: 768px) {
-  .app-hamburger {
-    display: inline-flex;
-  }
+/* 抽屉形态需要定位上下文（侧栏是 fixed，遮罩盖在内容之上） */
+.app-shell {
+  position: relative;
+}
 
+/* 端内按宽度自适应：窄窗口收紧内边距、页脚竖排（两端都适用） */
+@media (max-width: 768px) {
   .app-header {
     gap: var(--space-2);
     padding: 0 var(--space-3);
-  }
-
-  .app-shell {
-    position: relative;
-  }
-
-  .app-sidebar {
-    position: fixed;
-    top: var(--header-height);
-    bottom: 0;
-    left: 0;
-    z-index: 900;
-    width: 240px;
-    flex-basis: 240px;
-    overflow-y: auto;
-    box-shadow: var(--glass-shadow);
-    transform: translateX(-100%);
-    transition: transform var(--motion-base) var(--easing);
-  }
-
-  .app-sidebar.is-open {
-    transform: translateX(0);
   }
 
   .app-content {
@@ -622,8 +618,21 @@ code {
   }
 }
 
-@media (min-width: 769px) {
-  .app-sidebar-backdrop {
-    display: none;
-  }
+/* PC 端：侧栏常驻，隐藏汉堡与遮罩。骨架只跟端类走，窄视口不退化 */
+body.app-body--pc .app-hamburger {
+  display: none;
+}
+
+body.app-body--pc .app-sidebar-backdrop {
+  display: none;
+}
+
+body.app-body--pc .app-sidebar {
+  position: static;
+  width: 220px;
+  flex: 0 0 220px;
+  overflow-y: visible;
+  transform: none;
+  transition: none;
+  box-shadow: none;
 }

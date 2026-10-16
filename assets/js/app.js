@@ -2,12 +2,25 @@
  * 应用通用交互 · app.js
  * --------------------------------------------------------------------------
  * 职责：
- *   1) 移动端左侧菜单折叠（汉堡按钮开合，含遮罩、Esc 关闭、focus 可见）
- *   2) 初始化 Layui 表单模块
+ *   1) 视口高度变量：把 window.innerHeight 写入 --app-viewport-height，
+ *      供布局计算「撑满视口」的高度；旋屏 / 改窗口大小时同步更新。
+ *   2) 移动端左侧菜单折叠（汉堡按钮开合，含遮罩、Esc 关闭、focus 可见）。
  * 仅包含与业务无关的通用交互。
  */
 (function () {
   'use strict';
+
+  function initViewportHeight() {
+    var root = document.documentElement;
+
+    function apply() {
+      root.style.setProperty('--app-viewport-height', window.innerHeight + 'px');
+    }
+
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+  }
 
   function initSidebarToggle() {
     var toggle = document.getElementById('app-sidebar-toggle');
@@ -22,8 +35,10 @@
     backdrop.setAttribute('aria-hidden', 'true');
     document.body.appendChild(backdrop);
 
-    function isMobile() {
-      return window.matchMedia('(max-width: 768px)').matches;
+    /* 侧栏是否处于「抽屉」形态：交给 CSS 决定（移动端抽屉；PC 端始终常驻），
+       JS 用 computed position 判断，避免再复制一份断点逻辑。 */
+    function isDrawer() {
+      return window.getComputedStyle(sidebar).position === 'fixed';
     }
 
     function setOpen(open) {
@@ -54,27 +69,19 @@
     });
 
     window.addEventListener('resize', function () {
-      if (!isMobile()) {
+      if (!isDrawer()) {
         setOpen(false);
       }
     });
   }
 
-  function initLayui() {
-    if (window.layui && typeof window.layui.use === 'function') {
-      window.layui.use(['form'], function () {
-        /* 表单模块按需在此初始化 */
-      });
-    }
-  }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
+      initViewportHeight();
       initSidebarToggle();
-      initLayui();
     });
   } else {
+    initViewportHeight();
     initSidebarToggle();
-    initLayui();
   }
 })();

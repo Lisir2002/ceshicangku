@@ -7,7 +7,9 @@
         不校验、不误提交（拼音候选按 Enter 是「确认候选」，不是「提交」）
      3. 移动端键盘避让：用 visualViewport 计算键盘高度，稳定地让卡片避让
      4. 密码可见性切换（GOV.UK 模式）与验证码刷新
-     5. 提交加载态：只作用于按钮（登录 → 验证中 → 登录中 → 提交）
+     5. AJAX 提交：fetch 提交 /login.php，服务端失败就地提示、不刷新页面
+        （页面不重载，验证码图片不会被重新请求，会话中的验证码保持不变）
+     6. 提交加载态：只作用于按钮（登录 → 验证中 → 登录中 → 跳转）
 
    【关键约束】iOS / WKWebView 的 keyboardDisplayRequiresUserAction 默认为 YES：
    只有「可信用户手势」内调用的 focus() 才会弹出键盘。因此本文件
@@ -215,16 +217,17 @@
      避免逐帧改动造成的闪烁与跳动。
      ------------------------------------------------------------------ */
   var vv = window.visualViewport;
-  var mq = window.matchMedia('(max-width: 768px)');
+  /* 键盘避让只在移动端启用：端由 UA 决定（见 <html data-device> / body 的 app-body--mobile） */
+  var isMobileDevice = document.documentElement.getAttribute('data-device') === 'mobile';
   var root = document.documentElement;
   var timer = null;
 
-  if (vv) {
+  if (vv && isMobileDevice) {
     var apply = function () {
       timer = null;
       var inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
       /* 小于 150px 的变化多为地址栏伸缩，忽略；典型软键盘在 250px 以上 */
-      var open = mq.matches && inset > 150;
+      var open = inset > 150;
       root.style.setProperty('--keyboard-inset', (open ? inset : 0) + 'px');
       root.classList.toggle('is-keyboard-open', open);
     };
@@ -237,17 +240,16 @@
 
     vv.addEventListener('resize', schedule);
     vv.addEventListener('scroll', schedule);
-    if (mq.addEventListener) {
-      mq.addEventListener('change', schedule);
-    }
     apply();
   }
 
   /* ------------------------------------------------------------------
-     5. 提交：加载态只做在按钮内
+     5. 提交：AJAX 提交 + 加载态只做在按钮内
      ------------------------------------------------------------------ */
   var submit = document.getElementById('login-submit');
   var label = document.getElementById('login-submit-label');
+  var banner = document.getElementById('auth-error');
+  var bannerText = document.getElementById('auth-error-text');
   var busy = false;
 
   function setState(state) {
@@ -262,6 +264,54 @@
     label.textContent = (state === 'checking') ? '验证中' : '登录中';
   }
 
+  function showBanner(message) {
+    if (!banner) {
+      return;
+    }
+    bannerText.textContent = message;
+    banner.hidden = false;
+  }
+
+  function hideBanner() {
+    if (banner) {
+      banner.hidden = true;
+    }
+  }
+
+  /* 服务端失败提示：能对应到字段就就地显示，否则退回顶部横幅 */
+  function showServerError(fieldId, message) {
+    hideBanner();
+    if (fieldId && inputOf(fieldId)) {
+      render({ id: fieldId }, message);
+      return;
+    }
+    showBanner(message);
+  }
+
+  function postLogin() {
+    fetch('/login.php', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: new FormData(form)
+    }).then(function (response) {
+      return response.json();
+    }).catch(function () {
+      return null;
+    }).then(function (data) {
+      if (data && data.ok) {
+        window.location.href = data.redirect || '/admin.php';
+        return;
+      }
+      busy = false;
+      setState('idle');
+      if (data) {
+        showServerError(data.field || null, data.error || '登录失败，请重试。');
+      } else {
+        showBanner('网络或服务异常，请稍后重试。');
+      }
+    });
+  }
+
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (busy) {
@@ -272,10 +322,11 @@
       return;
     }
     busy = true;
+    hideBanner();
     setState('checking');
     window.setTimeout(function () {
       setState('submitting');
-      form.submit();
+      postLogin();
     }, 500);
   });
 })();

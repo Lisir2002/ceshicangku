@@ -10,19 +10,32 @@
  * - 尺寸在 60x22 画布绘制后放大 2 倍，无需外部字体文件
  *
  * 【故意漏洞 1：验证码重放】与【故意漏洞 3：无刷新限制】
- * - 本文件只负责“生成并写入 session”，不为验证码设置任何过期时间；
- *   验证码的失效由 login.php 决定，而那里刻意不做销毁 —— 见 login.php。
- * - 刷新验证码没有任何次数/频率限制，可被反复请求，配合抓包工具爆破。
+ * - 靶场模式下：本文件只负责“生成并写入 session”，不为验证码设置过期；
+ *   刷新也没有任何次数/频率限制，可被反复请求，配合抓包工具爆破。
+ * - 修复模式下：限制刷新频率（两次生成至少间隔 LAB_FIX_CAPTCHA_INTERVAL 秒），
+ *   并记录签发时间供 login.php 判断有效期。
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';
 
-// 生成 4 位数字
-$code = '';
-for ($i = 0; $i < 4; $i++) {
-    $code .= (string) mt_rand(0, 9);
+$now = time();
+
+/* 漏洞三（weak）修复模式：间隔内重复请求直接复用现有验证码（不重新生成、不重置有效期）。 */
+$reuse = lab_vuln_fix('weak')
+    && isset($_SESSION['captcha'], $_SESSION['captcha_time'])
+    && ($now - (int) $_SESSION['captcha_time']) < LAB_FIX_CAPTCHA_INTERVAL;
+
+if ($reuse) {
+    $code = (string) $_SESSION['captcha'];
+} else {
+    // 生成 4 位数字
+    $code = '';
+    for ($i = 0; $i < 4; $i++) {
+        $code .= (string) mt_rand(0, 9);
+    }
+    $_SESSION['captcha']      = $code;
+    $_SESSION['captcha_time'] = $now;
 }
-$_SESSION['captcha'] = $code;
 
 $width  = 120;
 $height = 44;

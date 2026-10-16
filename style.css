@@ -42,33 +42,27 @@
   box-shadow: var(--glass-shadow);
 }
 
-/* PC：仅占左半侧，卡片在其中居中（右侧留出天空） */
-@media (min-width: 769px) {
-  .auth {
-    width: 50%;
-  }
+/* 端级分支：登录卡片位置跟「端」走（PC 占左半侧 / 移动占满宽度），窄视口不退化 */
+body.app-body--pc .auth {
+  width: 50%;
 }
 
-/* 移动端：占满宽度，卡片居中；键盘避让交给 --keyboard-inset */
-@media (max-width: 768px) {
-  .auth {
-    width: 100%;
-    /* 软键盘弹出时，底部让出键盘高度：卡片整体上移，聚焦字段留在键盘之上。
-       --keyboard-inset 由 login.js 依据 visualViewport 计算（默认 0px）。 */
-    padding-bottom: calc(var(--space-4) + var(--keyboard-inset, 0px));
-    transition: padding-bottom var(--motion-base) var(--easing);
-  }
+body.app-body--mobile .auth {
+  width: 100%;
+  /* 软键盘弹出时，底部让出键盘高度：卡片整体上移，聚焦字段留在键盘之上。
+     --keyboard-inset 由 login.js 依据 visualViewport 计算（默认 0px）。 */
+  padding-bottom: calc(var(--space-4) + var(--keyboard-inset, 0px));
+  transition: padding-bottom var(--motion-base) var(--easing);
 }
 
 /* 键盘展开时（仅移动端）取消垂直居中，改为贴顶并允许滚动，
    避免卡片被顶部裁切、聚焦字段被键盘遮挡。 */
-@media (max-width: 768px) {
-  html.is-keyboard-open .auth {
-    justify-content: flex-start;
-  }
-  html.is-keyboard-open .auth__card {
-    margin-top: 0;
-  }
+html.is-keyboard-open body.app-body--mobile .auth {
+  justify-content: flex-start;
+}
+
+html.is-keyboard-open body.app-body--mobile .auth__card {
+  margin-top: 0;
 }
 
 .auth__brand {
@@ -113,6 +107,11 @@
 
 .auth__error .layui-icon {
   font-size: var(--font-size-base);
+}
+
+/* display:flex 会盖过 hidden 属性，需显式声明才能隐藏 */
+.auth__error[hidden] {
+  display: none;
 }
 
 /* 空态引导文案（初始未填写时展示的填写说明） */
@@ -446,4 +445,371 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: var(--space-5) 0 0;
+}
+
+/* ==========================================================================
+   6. 漏洞验证页（verify_vulns.php）
+   ========================================================================== */
+
+/* 6.1 模式开关条 */
+.lab-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.lab-switch {
+  display: inline-flex;
+  margin: 0;
+}
+
+.lab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.lab-badge--lab {
+  border-color: var(--color-danger);
+  background-color: rgba(220, 38, 38, 0.10);
+  color: var(--color-danger);
+}
+
+.lab-badge--fix {
+  border-color: var(--color-success);
+  background-color: rgba(21, 128, 61, 0.10);
+  color: var(--color-success);
+}
+
+.lab-note {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* 6.2 双模式对照 */
+.lab-compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 769px) {
+  .lab-compare {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.lab-compare__col {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--glass-hairline);
+  border-radius: var(--radius-md);
+  background-color: var(--glass-bg-strong);
+}
+
+.lab-compare__col--lab {
+  border-left: 3px solid var(--color-danger);
+}
+
+.lab-compare__col--fix {
+  border-left: 3px solid var(--color-success);
+}
+
+.lab-compare__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+/* 6.3 逐项详解 */
+.lab-check {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--glass-hairline);
+}
+
+.lab-check:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lab-check__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.lab-check__title .layui-icon {
+  font-size: 1.05em;
+}
+
+.lab-check__title .is-ok {
+  color: var(--color-success);
+}
+
+.lab-check__title .is-fail {
+  color: var(--color-danger);
+}
+
+.lab-row {
+  display: grid;
+  grid-template-columns: 6.5em 1fr;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+@media (max-width: 480px) {
+  .lab-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.lab-row__k {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.lab-row__v {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-fixcode {
+  display: block;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 6.4 组合攻击链 */
+.lab-chain {
+  margin: 0;
+  padding-left: 1.4em;
+  color: var(--color-text);
+}
+
+.lab-chain li {
+  margin: var(--space-1) 0;
+}
+
+/* 6.5 原始请求明细 */
+.lab-attempt {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--glass-hairline);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.lab-attempt:last-child {
+  border-bottom: 0;
+}
+
+.lab-attempt__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lab-attempt__verdict {
+  color: var(--color-text-secondary);
+}
+
+.lab-attempt--ok .lab-attempt__verdict {
+  color: var(--color-success);
+}
+
+.lab-attempt--fail .lab-attempt__verdict {
+  color: var(--color-danger);
+}
+
+/* ==========================================================================
+   7. 漏洞验证页 · 逐漏洞卡片
+   ========================================================================== */
+.lab-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.lab-card__head .app-card__title {
+  margin: 0;
+}
+
+.lab-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+
+.lab-result {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--glass-hairline);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background-color: var(--glass-bg-strong);
+}
+
+.lab-result--bad {
+  border-left-color: var(--color-danger);
+}
+
+.lab-result--good {
+  border-left-color: var(--color-success);
+}
+
+.lab-result__title {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.lab-result--bad .lab-result__title {
+  color: var(--color-danger);
+}
+
+.lab-result--good .lab-result__title {
+  color: var(--color-success);
+}
+
+.lab-result__headline {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text);
+}
+
+.lab-result__lines {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.lab-result__lines li {
+  margin: var(--space-1) 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-result__meta {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.lab-attempts {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--glass-hairline);
+}
+
+/* ==========================================================================
+   8. 漏洞验证页 · 卡内分区 / 折叠明细 / 按钮加载态
+   ========================================================================== */
+.lab-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--glass-hairline);
+}
+
+.lab-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lab-section__title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.lab-details {
+  margin-top: var(--space-3);
+}
+
+.lab-details > summary {
+  cursor: pointer;
+  color: var(--color-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.lab-details > summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.lab-card__error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.lab-card__error[hidden],
+.lab-page-notice[hidden] {
+  display: none;
+}
+
+/* 按钮「切换中」加载态：禁用其余按钮避免重复提交，被点的按钮显示旋转 */
+.lab-card__actions .layui-btn:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.lab-card__actions .layui-btn.is-loading {
+  opacity: 1;
+}
+
+.lab-card__actions .layui-btn.is-loading::before {
+  content: "";
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: var(--space-2);
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-card__actions .layui-btn.is-loading::before {
+    animation-duration: 2s;
+  }
 }
