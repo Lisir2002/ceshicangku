@@ -27,7 +27,7 @@ blog_lab/
 ├── login.php                 # ★ 处理登录请求
 ├── admin.php                 # ★ 登录成功后台页（显示“欢迎 xxx”）
 ├── logout.php                # 退出登录
-├── verify_vulns.php          # ★ 漏洞验证页（三张漏洞卡 + 总结卡，AJAX 不刷新）
+├── verify_vulns.php          # ★ 漏洞验证页（三张漏洞卡 + 总结卡，AJAX 不刷新；移动端横滑翻卡）
 ├── style.css                 # ★ 页面样式入口（@import 令牌层 + app.css）
 ├── docs/                     # 文档目录
 │   ├── 协同文档.md            # 协作基线文档（规则 / 决策 / 技术点）

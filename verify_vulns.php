@@ -5,8 +5,9 @@
  * 教学靶场，故意包含漏洞，仅限本地实验，禁止公网部署。
  *
  * 登录后从左侧导航「漏洞验证」进入。页面按**漏洞**组织：
- *   每个漏洞一张卡片，卡内分三段（漏洞说明 / 操作 / 测试结果），
- *   最后一张是总结卡片。
+ *   每个漏洞一张卡片，卡内分四段（漏洞说明 / 代码对照 / 操作 / 测试结果），
+ *   最后一张是总结卡片。代码对照段完整展示造成漏洞的源码片段
+ *   与修复后的安全实现（均取自真实文件）。
  *
  * 交互方式（与登录页一致）：按钮全部走 AJAX —— 前端 `fetch` 提交，
  * 服务端处理完返回 JSON，前端就地替换卡片内容，**页面不刷新**；
@@ -36,6 +37,117 @@ $root   = $dir;
 $base   = $scheme . '://' . $host . $dir;
 
 /* --------------------------------------------------------------------------
+ * 三处漏洞的代码对照片段（取自 login.php / captcha.php / lab-mode.php 真实源码）
+ * -------------------------------------------------------------------------- */
+$vv_replay_vuln = <<<'EOT'
+// login.php —— 靶场模式（漏洞路径）
+$expected = isset($_SESSION['captcha']) ? (string) $_SESSION['captcha'] : '';
+
+$expired = false;                    // 靶场模式：不读签发时间，永不过期
+if (lab_vuln_fix('replay')) {        // 开关关闭，有效期检查整块跳过
+    $issued  = isset($_SESSION['captcha_time']) ? (int) $_SESSION['captcha_time'] : 0;
+    $expired = ($issued <= 0) || ((time() - $issued) > LAB_FIX_CAPTCHA_TTL);
+}
+
+if ($expected === '' || $expired || !hash_equals($expected, $captcha)) {
+    login_fail('验证码错误', 'captcha');
+}
+
+if (lab_vuln_fix('replay')) {        // 开关关闭，不销毁 —— 验证码留在 session，可重放
+    unset($_SESSION['captcha'], $_SESSION['captcha_time']);
+}
+EOT;
+
+$vv_replay_fix = <<<'EOT'
+// captcha.php —— 生成时记录签发时间
+$_SESSION['captcha']      = $code;
+$_SESSION['captcha_time'] = $now;
+
+// login.php —— 修复模式：有效期 + 一次一用
+$issued  = isset($_SESSION['captcha_time']) ? (int) $_SESSION['captcha_time'] : 0;
+$expired = ($issued <= 0) || ((time() - $issued) > LAB_FIX_CAPTCHA_TTL);
+
+if ($expected === '' || $expired || !hash_equals($expected, $captcha)) {
+    login_fail('验证码错误', 'captcha');
+}
+
+unset($_SESSION['captcha'], $_SESSION['captcha_time']);   // 校验通过立即销毁
+EOT;
+
+$vv_enum_vuln = <<<'EOT'
+// login.php —— 靶场模式：先查账号，再单独校验口令，两种失败提示不同
+$user = find_user_by_username($username);   // 预处理语句查询，无 SQL 注入
+
+if ($user === null) {
+    login_fail('用户名不存在', 'username');   // 泄露「账号不存在」
+}
+
+if (!password_verify($password, $user['password'])) {
+    login_fail('密码错误', 'password');       // 与上一条提示不同 → 可枚举真实账号
+}
+EOT;
+
+$vv_enum_fix = <<<'EOT'
+// login.php —— 修复模式：统一提示 + 补做同成本校验抹平时序
+$user = find_user_by_username($username);
+
+if ($user === null) {
+    password_verify($password, LAB_FIX_DUMMY_HASH);   // 同成本 bcrypt，抹平时序差异
+    login_fail('用户名或密码错误', null);
+}
+
+if (!password_verify($password, $user['password'])) {
+    login_fail('用户名或密码错误', null);
+}
+EOT;
+
+$vv_weak_vuln = <<<'EOT'
+// captcha.php —— 靶场模式：刷新无频率限制（$reuse 恒为 false，每次都重新生成）
+$code = '';
+for ($i = 0; $i < 4; $i++) {
+    $code .= (string) mt_rand(0, 9);
+}
+$_SESSION['captcha'] = $code;
+
+// login.php —— 靶场模式：登录失败不计数、无锁定
+if (!password_verify($password, $user['password'])) {
+    if (lab_vuln_fix('weak')) {        // 开关关闭 → 不计数、不锁定
+        lab_login_register_fail();
+    }
+    login_fail('密码错误', 'password');
+}
+// 结果：预置弱口令 admin/admin123 可被无限次重试，直到命中。
+EOT;
+
+$vv_weak_fix = <<<'EOT'
+// includes/lab-mode.php —— 修复参数
+
+define('LAB_FIX_MAX_FAILS', 5);          // 5 次失败后锁定
+
+define('LAB_FIX_LOCK_SECONDS', 300);     // 锁定 5 分钟
+
+define('LAB_FIX_CAPTCHA_INTERVAL', 10);  // 验证码两次生成最小间隔（秒）
+
+// login.php —— 凭据校验前先查锁定；失败计数；成功后清零
+$lock_left = lab_login_lock_remaining();
+if ($lock_left > 0) {
+    login_fail('尝试次数过多，请 ' . $lock_left . ' 秒后再试', null);
+}
+
+if (!password_verify($password, $user['password'])) {
+    lab_login_register_fail();           // 计数，达阈值后触发锁定
+    login_fail('密码错误', 'password');
+}
+
+lab_login_reset_fails();                 // 登录成功后清零
+
+// captcha.php —— 刷新频率限制（间隔内直接复用现有验证码）
+$reuse = lab_vuln_fix('weak')
+    && isset($_SESSION['captcha'], $_SESSION['captcha_time'])
+    && ($now - (int) $_SESSION['captcha_time']) < LAB_FIX_CAPTCHA_INTERVAL;
+EOT;
+
+/* --------------------------------------------------------------------------
  * 三处漏洞的元信息
  * -------------------------------------------------------------------------- */
 $VULNS = array(
@@ -44,24 +156,27 @@ $VULNS = array(
         'name'  => '验证码重放',
         'what'  => '验证码通过校验后不被销毁、也不设有效期，同一个值可反复用于多次登录尝试。',
         'why'   => '验证码若「一次一用」，攻击者每猜一次口令都要重新识别验证码，自动化成本被抬高几个数量级；可重放等于把防自动化的闸门拆掉。',
-        'fix'   => '校验通过后立即销毁验证码，并给它加签发时间与有效期（本靶场设为 5 分钟）。',
-        'code'  => "// login.php（lab_vuln_fix('replay')）\nunset(\$_SESSION['captcha'], \$_SESSION['captcha_time']);\n\$expired = (time() - \$issued) > LAB_FIX_CAPTCHA_TTL;",
+        'fix'       => '校验通过后立即销毁验证码，并给它加签发时间与有效期（本靶场设为 5 分钟）。',
+        'vuln_code' => $vv_replay_vuln,
+        'fix_code'  => $vv_replay_fix,
     ),
     'enum' => array(
         'no'    => '漏洞二',
         'name'  => '用户名探测',
         'what'  => '用户名不存在与口令错误返回「不同」提示，据此可枚举出系统内真实存在的账号。',
         'why'   => '它把「用户名 × 口令」的盲爆破降维成「已知账号的口令爆破」，缩小搜索空间、提高命中率；两条分支耗时不同还会形成时序侧信道。',
-        'fix'   => '两种失败统一提示；账号不存在时补做一次同成本的 bcrypt 校验，抹平时序差异。',
-        'code'  => "// login.php（lab_vuln_fix('enum')）\npassword_verify(\$password, LAB_FIX_DUMMY_HASH);\nlogin_fail('用户名或密码错误', null);",
+        'fix'       => '两种失败统一提示；账号不存在时补做一次同成本的 bcrypt 校验，抹平时序差异。',
+        'vuln_code' => $vv_enum_vuln,
+        'fix_code'  => $vv_enum_fix,
     ),
     'weak' => array(
         'no'    => '漏洞三',
         'name'  => '弱口令与无限制',
         'what'  => '预置弱口令账号，且登录失败不计数、无锁定、验证码刷新也无频率限制。',
         'why'   => '没有失败限制，爆破就没有天花板、也不会被阻断；配合另外两条漏洞，三道防线同时失效。',
-        'fix'   => '失败次数限制 + 锁定 + 验证码刷新频率限制（生产还应按账号/来源 IP 持久化计数，并强制口令强度）。',
-        'code'  => "// lab-mode.php 常量\nLAB_FIX_MAX_FAILS = 5;          // 5 次失败后锁定\nLAB_FIX_LOCK_SECONDS = 300;     // 锁定 5 分钟\nLAB_FIX_CAPTCHA_INTERVAL = 10;  // 验证码 10 秒内不重复生成",
+        'fix'       => '失败次数限制 + 锁定 + 验证码刷新频率限制（生产还应按账号/来源 IP 持久化计数，并强制口令强度）。',
+        'vuln_code' => $vv_weak_vuln,
+        'fix_code'  => $vv_weak_fix,
     ),
 );
 
@@ -381,7 +496,19 @@ function vv_render_card($key, $v, $is_fix, $res, $root)
         <h3 class="lab-section__title">漏洞说明</h3>
         <div class="lab-row"><span class="lab-row__k">是什么</span><span class="lab-row__v"><?php echo e($v['what']); ?></span></div>
         <div class="lab-row"><span class="lab-row__k">为什么是漏洞</span><span class="lab-row__v"><?php echo e($v['why']); ?></span></div>
-        <div class="lab-row"><span class="lab-row__k">修复做法</span><span class="lab-row__v"><?php echo e($v['fix']); ?><code class="lab-fixcode"><?php echo e($v['code']); ?></code></span></div>
+        <div class="lab-row"><span class="lab-row__k">修复做法</span><span class="lab-row__v"><?php echo e($v['fix']); ?></span></div>
+    </div>
+
+    <div class="lab-section">
+        <h3 class="lab-section__title">代码对照（真实源码节选 · 点击标题展开/收起）</h3>
+        <details class="lab-code lab-code--vuln">
+            <summary class="lab-code__label">漏洞代码 · 造成漏洞的原因</summary>
+            <pre class="lab-code__pre"><?php echo e($v['vuln_code']); ?></pre>
+        </details>
+        <details class="lab-code lab-code--fix">
+            <summary class="lab-code__label">修复代码 · 安全实现</summary>
+            <pre class="lab-code__pre"><?php echo e($v['fix_code']); ?></pre>
+        </details>
     </div>
 
     <div class="lab-section">
@@ -634,6 +761,8 @@ include __DIR__ . '/includes/layout/header.php';
         </ul>
     </div>
 
+    <p class="lab-swipe-hint">← 左右滑动，查看各漏洞卡片与总结 →</p>
+    <div class="lab-swipe">
     <?php foreach ($VULNS as $k => $v) { ?>
     <div class="app-card lab-card" data-lab-card="<?php echo e($k); ?>">
         <?php echo vv_render_card($k, $v, $state[$k] === 'fix', isset($last[$k]) ? $last[$k] : null, $root); ?>
@@ -642,6 +771,7 @@ include __DIR__ . '/includes/layout/header.php';
 
     <div class="app-card lab-card" data-lab-summary>
         <?php echo vv_render_summary($VULNS, $state, $last, $root); ?>
+    </div>
     </div>
 </div>
 <script src="<?php echo e($root); ?>/assets/js/verify.js"></script>

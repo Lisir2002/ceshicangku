@@ -607,11 +607,96 @@ html.is-keyboard-open body.app-body--mobile .auth__card {
   overflow-wrap: anywhere;
 }
 
+/* 6.4 代码对照：漏洞代码 / 修复代码 */
+.lab-code {
+  margin-top: var(--space-3);
+  border: 1px solid var(--glass-hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.lab-code__label {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--glass-hairline);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 折叠态提示（原生 details/summary，零 JS） */
+.lab-code__label::after {
+  float: right;
+  content: "展开 ▾";
+  color: var(--color-secondary);
+  font-weight: 400;
+}
+
+.lab-code[open] .lab-code__label::after {
+  content: "收起 ▴";
+}
+
+.lab-code__label:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.lab-code--vuln .lab-code__label {
+  color: var(--color-danger);
+}
+
+.lab-code--fix .lab-code__label {
+  color: var(--color-success);
+}
+
+.lab-code__pre {
+  margin: 0;
+  padding: var(--space-3);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* 6.4 组合攻击链 */
 .lab-chain {
   margin: 0;
   padding-left: 1.4em;
   color: var(--color-text);
+}
+
+/* 6.4b 漏洞卡片横滑（仅移动端窄屏）：scroll-snap 原生滑动，无 JS、无自动滚动 */
+.lab-swipe-hint {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body.app-body--mobile .lab-swipe-hint {
+    display: block;
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    text-align: center;
+  }
+
+  body.app-body--mobile .lab-swipe {
+    display: flex;
+    gap: var(--space-4);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.app-body--mobile .lab-swipe > .lab-card {
+    flex: 0 0 88%;
+    margin-top: 0; /* 竖排间距由 gap 接管，避免行内 margin-top 错位 */
+    scroll-snap-align: start;
+  }
 }
 
 .lab-chain li {
@@ -783,6 +868,11 @@ html.is-keyboard-open body.app-body--mobile .auth__card {
 .lab-card__error[hidden],
 .lab-page-notice[hidden] {
   display: none;
+}
+
+/* wrapper 化后 notice 与首卡不再相邻，手动补回原 .app-card + .app-card 的竖排间距 */
+.lab-page-notice:not([hidden]) + .lab-swipe {
+  margin-top: var(--space-5);
 }
 
 /* 按钮「切换中」加载态：禁用其余按钮避免重复提交，被点的按钮显示旋转 */
